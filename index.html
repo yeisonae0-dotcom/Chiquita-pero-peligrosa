@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Una rosa para ti</title>
+<style>
+:root{color-scheme:dark;box-sizing:border-box}
+html,body{height:100%;margin:0;background:#12030b;overflow:hidden;font-family:system-ui,sans-serif}
+canvas{display:block;touch-action:none}
+#hint{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:0;right:0;text-align:center;color:#ffe3c4;font-size:13px;opacity:.85;transition:opacity 2s;pointer-events:none}
+</style></head><body>
+<div id="hint">Desliza hacia los lados para girar · pellizca para acercar</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const T=THREE,PHOTO="https://i.ibb.co/7dgmjkTR/IMG-4873.png",TY=1.5;
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)),eo=p=>1-Math.pow(1-p,3),ob=p=>{const c=1.70158;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2)};
+const scene=new T.Scene();scene.background=new T.Color(0x12030b);scene.fog=new T.FogExp2(0x12030b,.016);
+const asp=innerWidth/innerHeight,cam=new T.PerspectiveCamera(asp<1?60:50,asp,.1,120);
+const dist=clamp(4.8/(Math.tan(cam.fov*Math.PI/360)*asp),17,28);cam.position.set(0,TY+dist*.12,dist);
+const ren=new T.WebGLRenderer({antialias:true});ren.setPixelRatio(Math.min(devicePixelRatio,2));ren.setSize(innerWidth,innerHeight);ren.outputEncoding=T.sRGBEncoding;document.body.appendChild(ren.domElement);
+const ctl=new T.OrbitControls(cam,ren.domElement);ctl.target.set(0,TY,0);ctl.enableDamping=true;ctl.minDistance=5;ctl.maxDistance=38;ctl.enablePan=false;
+ctl.minPolarAngle=ctl.maxPolarAngle=Math.atan2(Math.hypot(cam.position.x,cam.position.z),cam.position.y-TY);
+scene.add(new T.HemisphereLight(0xffd6e0,0x2a0a18,.9));
+const dl=new T.DirectionalLight(0xffffff,1.1);dl.position.set(4,8,6);scene.add(dl);
+const pl=new T.PointLight(0xff4d6d,1.4,16);pl.position.set(-3,2,3);scene.add(pl);
+const wl=new T.PointLight(0xffd9b0,.9,14);wl.position.set(3,3,4);scene.add(wl);
+
+function petalGeo(k,f,wv=.5){const g=new T.PlaneGeometry(1,1,12,14),p=g.attributes.position,col=[];
+  for(let i=0;i<p.count;i++){const u=p.getX(i)*2,v=p.getY(i)+.5,w=Math.sin(Math.PI*(.1+.8*Math.pow(v,.7))),x=u*wv*w;
+    p.setXYZ(i,x,v*1.2,-k*x*x+f*v*v*v+Math.sin(u*4+v*3)*.025*v);const c=.38+.62*v+.18*u*u*v;col.push(c,c*.88,c*.92)}
+  g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.computeVertexNormals();return g}
+const mat=c=>new T.MeshPhysicalMaterial({color:c,vertexColors:true,roughness:.42,clearcoat:.35,clearcoatRoughness:.35,sheen:new T.Color(0xff6b8a),side:T.DoubleSide,emissive:0x240006});
+const rose=new T.Group();scene.add(rose);const head=new T.Group();head.scale.setScalar(1.3);rose.add(head);
+const LY=[
+{n:3,s:.32,r:.03,o:.08,c:.03,k:2,f:0,col:0x7a0820},{n:4,s:.42,r:.06,o:.2,c:.06,k:1.8,f:.02,col:0x8f0a24},
+{n:5,s:.54,r:.1,o:.4,c:.1,k:1.5,f:.06,col:0xa80f2b},{n:5,s:.66,r:.15,o:.62,c:.12,k:1.3,f:.12,col:0xbf1230},
+{n:6,s:.78,r:.21,o:.85,c:.15,k:1.1,f:.22,col:0xd01535},{n:7,s:.9,r:.28,o:1.1,c:.18,k:.9,f:.35,col:0xdf1c3f},
+{n:8,s:1.02,r:.36,o:1.38,c:.22,k:.75,f:.5,col:0xea2748}];
+const pet=[];
+LY.forEach((l,li)=>{const g=petalGeo(l.k,l.f),m=mat(l.col);
+  for(let i=0;i<l.n;i++){const py=new T.Group(),px=new T.Group(),me=new T.Mesh(g,m),v=.92+Math.random()*.16;
+    py.rotation.y=i/l.n*Math.PI*2+li*.7+(Math.random()-.5)*.25;px.position.z=l.r;px.add(me);py.add(px);head.add(py);
+    pet.push({px,l,v,d:1.3+li*.4+i*.07,sd:Math.random()*6})}});
+const green=new T.MeshStandardMaterial({color:0x1f8a4c,roughness:.55,side:T.DoubleSide,vertexColors:true});
+for(let i=0;i<5;i++){const py=new T.Group(),px=new T.Group(),me=new T.Mesh(petalGeo(.5,.1),green);me.scale.set(.5,.8,1);
+  py.rotation.y=i/5*Math.PI*2+.3;px.position.set(0,-.05,.1);px.rotation.x=2.3;px.add(me);py.add(px);head.add(py)}
+const curve=new T.CatmullRomCurve3([new T.Vector3(0,-3.2,0),new T.Vector3(.15,-2.3,.1),new T.Vector3(-.1,-1.2,-.05),new T.Vector3(0,-.1,0)]);
+const stem=new T.Mesh(new T.TubeGeometry(curve,40,.07,8,false),new T.MeshStandardMaterial({color:0x1f8a4c,roughness:.6}));rose.add(stem);
+const sIdx=stem.geometry.index.count,leaves=[];
+[[1.6,-1.9],[-1.6,-1.3]].forEach(a=>{const py=new T.Group(),px=new T.Group(),me=new T.Mesh(petalGeo(.9,.3),green);
+  me.scale.set(.9,1.1,1);py.position.set(0,a[1],0);py.rotation.y=a[0];px.rotation.x=1.15;px.add(me);py.add(px);rose.add(py);leaves.push(px)});
+
+function radTex(stops){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d'),r=g.createRadialGradient(64,64,0,64,64,64);stops.forEach(s=>r.addColorStop(s[0],s[1]));g.fillStyle=r;g.fillRect(0,0,128,128);return new T.CanvasTexture(c)}
+
+/* Base de madera */
+function woodTex(){const c=document.createElement('canvas');c.width=512;c.height=256;const g=c.getContext('2d');g.fillStyle='#8a5530';g.fillRect(0,0,512,256);
+  for(let y=0;y<256;y+=2){g.strokeStyle='hsla(25,45%,'+(28+Math.random()*16)+'%,.55)';g.lineWidth=1+Math.random()*2;g.beginPath();for(let x=0;x<=512;x+=16)g.lineTo(x,y+Math.sin(x*.02+y*.1)*3);g.stroke()}
+  const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(3,1);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t}
+const wood=new T.MeshStandardMaterial({map:woodTex(),roughness:.55,metalness:.05});
+const plinth=new T.Mesh(new T.CylinderGeometry(3.1,3.15,.35,96),wood);plinth.position.y=-3.725;
+const upper=new T.Mesh(new T.CylinderGeometry(2.85,2.9,.35,96),wood);upper.position.y=-3.375;
+const brass=new T.MeshStandardMaterial({color:0xc9a24a,metalness:.45,roughness:.35});
+const ring=new T.Mesh(new T.TorusGeometry(2.5,.07,12,120),brass);ring.rotation.x=Math.PI/2;ring.position.y=-3.18;
+const moss=new T.Mesh(new T.CircleGeometry(2.45,64),new T.MeshStandardMaterial({color:0x1c3a22,roughness:1}));moss.rotation.x=-Math.PI/2;moss.position.y=-3.195;
+scene.add(plinth,upper,ring,moss);
+const gr=new T.Mesh(new T.CircleGeometry(7,64),new T.MeshBasicMaterial({map:radTex([[0,'rgba(255,77,109,.4)'],[1,'rgba(255,77,109,0)']]),transparent:true,depthWrite:false,fog:false}));
+gr.rotation.x=-Math.PI/2;gr.position.y=-3.93;scene.add(gr);
+
+/* Cúpula de vidrio */
+const prof=[new T.Vector2(2.5,-3.2),new T.Vector2(2.5,.4)];
+for(let i=1;i<=28;i++){const a=i/28*Math.PI/2;prof.push(new T.Vector2(Math.max(2.5*Math.cos(a),.001),.4+2.6*Math.sin(a)))}
+const dome=new T.Mesh(new T.LatheGeometry(prof,96),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,
+  uniforms:{L:{value:new T.Vector3(-.5,.8,.6)}},
+  vertexShader:'varying vec3 vN,vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=-mv.xyz;gl_Position=projectionMatrix*mv;}',
+  fragmentShader:'uniform vec3 L;varying vec3 vN,vV;void main(){vec3 n=normalize(vN);if(!gl_FrontFacing)n=-n;vec3 v=normalize(vV);float f=pow(1.-abs(dot(n,v)),2.4);vec3 l=normalize((viewMatrix*vec4(L,0.)).xyz);float s=pow(max(dot(reflect(-l,n),v),0.),70.);vec3 l2=normalize((viewMatrix*vec4(-L.x,L.y*.5,L.z,0.)).xyz);float s2=pow(max(dot(reflect(-l2,n),v),0.),40.)*.4;vec3 col=mix(vec3(.75,.88,1.),vec3(1.,.85,.92),f);gl_FragColor=vec4(col,.05+.5*f+.85*s+.35*s2);}'}));
+dome.renderOrder=10;scene.add(dome);
+const knob=new T.Mesh(new T.SphereGeometry(.13,24,16),brass);knob.position.y=3.02;scene.add(knob);
+
+/* Partículas y pétalos dentro del vidrio */
+const N=140,sp=new Float32Array(N*3);for(let i=0;i<N*3;i+=3){sp[i]=(Math.random()-.5)*20;sp[i+1]=Math.random()*12-4;sp[i+2]=(Math.random()-.5)*20}
+const spg=new T.BufferGeometry();spg.setAttribute('position',new T.BufferAttribute(sp,3));
+scene.add(new T.Points(spg,new T.PointsMaterial({size:.16,map:radTex([[0,'#fff'],[.4,'rgba(255,225,190,.6)'],[1,'rgba(255,225,190,0)']]),transparent:true,depthWrite:false,blending:T.AdditiveBlending,fog:false})));
+const fall=[],fm=mat(0xc3132f),fg=petalGeo(1.2,.2);
+for(let i=0;i<10;i++){const m=new T.Mesh(fg,fm);m.scale.setScalar(.16);m.visible=false;const a=Math.random()*6.28,r=.6+Math.random()*1;m.userData={x:Math.cos(a)*r,z:Math.sin(a)*r,y:Math.random()*5-3,s:Math.random()*6,r:Math.random()+.3};scene.add(m);fall.push(m)}
+
+/* Foto con desenfoque */
+const ph=new T.Group(),inner=new T.Group();ph.add(inner);scene.add(ph);
+function ph0(){const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d'),r=g.createLinearGradient(0,0,256,256);r.addColorStop(0,'#ff8fab');r.addColorStop(1,'#c9184a');g.fillStyle=r;g.fillRect(0,0,256,256);g.fillStyle='#fff';g.textAlign='center';g.font='110px sans-serif';g.fillText('💗',128,150);const t=new T.CanvasTexture(c);t.minFilter=T.LinearFilter;return t}
+const pm=new T.ShaderMaterial({transparent:true,
+  uniforms:{map:{value:ph0()},rep:{value:new T.Vector2(1,1)},off:{value:new T.Vector2(0,0)},blur:{value:.32},alpha:{value:0}},
+  vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:'uniform sampler2D map;uniform vec2 rep,off;uniform float blur,alpha;varying vec2 vUv;void main(){vec3 c=vec3(0.);for(int i=0;i<24;i++){float fi=float(i);float a=fi*2.39996;float r=sqrt((fi+.5)/24.)*blur;vec2 uv=clamp(vUv+vec2(cos(a),sin(a))*r,0.,1.);c+=texture2D(map,uv*rep+off).rgb;}gl_FragColor=vec4(c/24.,alpha);}'});
+const frame=new T.Mesh(new T.RingGeometry(1.15,1.3,64),new T.MeshBasicMaterial({color:0xf5d38a,transparent:true,opacity:0}));frame.position.z=.01;
+const glow=new T.Sprite(new T.SpriteMaterial({map:radTex([[0,'rgba(255,150,160,.7)'],[1,'rgba(255,150,160,0)']]),transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,fog:false}));glow.scale.set(5.5,5.5,1);glow.position.z=-.05;
+inner.add(new T.Mesh(new T.CircleGeometry(1.15,64),pm),frame,glow);ph.visible=false;
+function setPhoto(img){const tx=new T.Texture(img);tx.minFilter=tx.magFilter=T.LinearFilter;tx.generateMipmaps=false;const a=img.width/img.height;
+  if(a>1){pm.uniforms.rep.value.set(1/a,1);pm.uniforms.off.value.set((1-1/a)/2,0)}else{pm.uniforms.rep.value.set(1,a);pm.uniforms.off.value.set(0,(1-a)/2)}
+  tx.needsUpdate=true;pm.uniforms.map.value=tx}
+const im=new Image();im.crossOrigin='anonymous';im.onload=()=>setPhoto(im);im.src=PHOTO;
+
+let t=0,last=performance.now();
+function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-last)/1000,.05);last=now;t+=dt;
+  stem.geometry.setDrawRange(0,Math.floor(sIdx*eo(clamp(t/1.6))/6)*6);
+  leaves.forEach((l,i)=>l.scale.setScalar(Math.max(ob(clamp((t-1.2-i*.3)/1.2)),.001)));
+  pet.forEach(p=>{const e=eo(clamp((t-p.d)/2.4)),sc=p.l.s*p.v*(.3+.7*e)*(t>p.d?1:0);
+    p.px.scale.setScalar(Math.max(sc,.001));p.px.rotation.x=p.l.c+(p.l.o-p.l.c)*e+Math.sin(t*.9+p.sd)*.025*e});
+  rose.rotation.z=Math.sin(t*.6)*.025;
+  if(t>3.8){ph.visible=true;const p=clamp((t-3.8)/3.2),e=eo(p),al=clamp(p*2.2);
+    pm.uniforms.blur.value=.32*(1-e);pm.uniforms.alpha.value=al;frame.material.opacity=al;glow.material.opacity=al*.8;
+    inner.scale.setScalar(.8+.2*e);ph.position.set(0,3.5+e*1.8+Math.sin(t*1.3)*.08*p,0);ph.lookAt(cam.position)}
+  fall.forEach(m=>{const d=m.userData;m.visible=t>4.5;d.y-=dt*.3;if(d.y<-3.1)d.y=2.2;m.position.set(d.x+Math.sin(t*.7+d.s)*.25,d.y,d.z);m.rotation.set(t*d.r,t*d.r*.7,d.s)});
+  const a=spg.attributes.position;for(let i=1;i<N*3;i+=3){a.array[i]+=dt*.2;if(a.array[i]>8)a.array[i]=-4}a.needsUpdate=true;
+  ctl.update();ren.render(scene,cam)}
+requestAnimationFrame(loop);
+setTimeout(()=>document.getElementById('hint').style.opacity=0,7000);
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight)});
+</script></body></html>
